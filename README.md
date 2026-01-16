@@ -10,6 +10,7 @@
 - **Real-time Monitoring** - Watch tool calls, file operations, and commands as they happen
 - **Multi-Session Support** - Track multiple Claude Code instances simultaneously
 - **Session Analytics** - Tool usage counts, activity timelines, and status tracking
+- **Cross-Platform** - Works on Windows, macOS, and Linux
 - **Open Source** - Fully auditable, no telemetry, your code stays local
 
 ## Quick Start
@@ -95,9 +96,17 @@ docker compose down
 docker compose up -d --build
 ```
 
-### Prerequisites for Docker Mode
+### Platform Support
 
-The bash hook script requires these tools on your host:
+The setup auto-detects your OS and uses the appropriate hook script:
+
+| Platform | Hook Script | Dependencies |
+|----------|-------------|--------------|
+| **Windows** | `send-event.ps1` (PowerShell) | None - uses built-in cmdlets |
+| **macOS** | `send-event.sh` (bash) | `curl`, `jq` |
+| **Linux** | `send-event.sh` (bash) | `curl`, `jq` |
+
+#### macOS/Linux Prerequisites
 
 ```bash
 # macOS
@@ -109,6 +118,10 @@ sudo apt install jq curl
 # Verify
 curl --version && jq --version
 ```
+
+#### Windows Prerequisites
+
+No additional tools needed - PowerShell is built-in. Just make sure Docker Desktop is installed.
 
 ## Architecture
 
@@ -230,7 +243,8 @@ claude-hive/
 │   └── package.json
 ├── hooks/
 │   ├── send-event.js     # Hook script (Node.js mode)
-│   └── send-event.sh     # Hook script (Docker mode - bash/curl)
+│   ├── send-event.sh     # Hook script (Docker mode - macOS/Linux)
+│   └── send-event.ps1    # Hook script (Docker mode - Windows)
 ├── cli/
 │   ├── index.js          # CLI entry point
 │   ├── setup.js          # Hook installation
