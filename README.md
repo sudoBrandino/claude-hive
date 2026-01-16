@@ -15,37 +15,57 @@
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### One-Line Install (Recommended)
 
-Keep your system clean by running the server in a container:
+**macOS/Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/claude-hive/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/YOUR_USERNAME/claude-hive/main/install.ps1 | iex
+```
+
+This downloads the Docker image, starts the container, and installs the hooks automatically.
+
+### Manual Docker Setup
+
+If you prefer to set things up manually:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/claude-hive
-cd claude-hive
+# Create a docker-compose.yml anywhere
+cat > docker-compose.yml << 'EOF'
+services:
+  hive:
+    image: ghcr.io/YOUR_USERNAME/claude-hive:latest
+    container_name: claude-hive
+    ports:
+      - "4520:4520"
+    restart: unless-stopped
+EOF
 
-# Install hooks (uses lightweight bash script, requires curl + jq)
-node cli/index.js setup --docker
-
-# Start the container
+# Start
 docker compose up -d
 
 # Open dashboard
 open http://localhost:4520
 ```
 
-### Option 2: Native (Node.js)
+Then install hooks manually (see [Platform Support](#platform-support)).
+
+### Build From Source
 
 ```bash
-# Install dependencies
-npm install
-cd client && npm install && cd ..
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/claude-hive
+cd claude-hive
 
-# Install hooks into Claude Code
-npm run setup
+# Install hooks
+node cli/index.js setup --docker
 
-# Start the server
-npm start
+# Build and start
+docker compose up -d --build
 
 # Open dashboard
 open http://localhost:4520
