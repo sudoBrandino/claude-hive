@@ -1,0 +1,12 @@
+node_modules
+client/node_modules
+client/dist
+.git
+.gitignore
+*.md
+LICENSE
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db

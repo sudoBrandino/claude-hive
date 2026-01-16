@@ -34,9 +34,10 @@ program
 program
   .command('setup')
   .description('Install hooks into Claude Code')
-  .action(async () => {
+  .option('-d, --docker', 'Use Docker mode (bash/curl hooks, no Node.js required)')
+  .action(async (options) => {
     const { setup } = await import('./setup.js');
-    await setup();
+    await setup({ docker: options.docker });
   });
 
 program

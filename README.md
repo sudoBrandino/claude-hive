@@ -14,9 +14,31 @@
 
 ## Quick Start
 
+### Option 1: Docker (Recommended)
+
+Keep your system clean by running the server in a container:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/claude-hive
+cd claude-hive
+
+# Install hooks (uses lightweight bash script, requires curl + jq)
+node cli/index.js setup --docker
+
+# Start the container
+docker compose up -d
+
+# Open dashboard
+open http://localhost:4520
+```
+
+### Option 2: Native (Node.js)
+
 ```bash
 # Install dependencies
 npm install
+cd client && npm install && cd ..
 
 # Install hooks into Claude Code
 npm run setup
@@ -26,6 +48,66 @@ npm start
 
 # Open dashboard
 open http://localhost:4520
+```
+
+## Docker Details
+
+The Docker setup separates concerns:
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| **Server** | Container | WebSocket + Express server on port 4520 |
+| **Dashboard** | Container | Pre-built React + Three.js UI |
+| **Hooks** | Host | Lightweight bash script (curl + jq) |
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  HOST MACHINE                                                    │
+│  ┌──────────────┐     ┌─────────────────┐                       │
+│  │ Claude Code  │────▶│ send-event.sh   │──┐                    │
+│  │              │     │ (bash + curl)   │  │                    │
+│  └──────────────┘     └─────────────────┘  │                    │
+├────────────────────────────────────────────┼────────────────────┤
+│  DOCKER CONTAINER                          │                    │
+│                                            ▼                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Claude Hive Server (port 4520)                          │  │
+│  │  ├── /events (POST) ← receives hook events               │  │
+│  │  ├── WebSocket ← streams to dashboard                    │  │
+│  │  └── Static files ← serves React UI                      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Docker Commands
+
+```bash
+# Build and start
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+
+# Rebuild after changes
+docker compose up -d --build
+```
+
+### Prerequisites for Docker Mode
+
+The bash hook script requires these tools on your host:
+
+```bash
+# macOS
+brew install jq
+
+# Ubuntu/Debian
+sudo apt install jq curl
+
+# Verify
+curl --version && jq --version
 ```
 
 ## Architecture
@@ -74,10 +156,11 @@ open http://localhost:4520
 
 ```bash
 # Using npx (after publishing)
-npx claude-hive           # Start server
-npx claude-hive setup     # Install hooks
-npx claude-hive doctor    # Diagnose issues
-npx claude-hive uninstall # Remove hooks
+npx claude-hive              # Start server
+npx claude-hive setup        # Install hooks (Node.js mode)
+npx claude-hive setup -d     # Install hooks (Docker mode - bash/curl)
+npx claude-hive doctor       # Diagnose issues
+npx claude-hive uninstall    # Remove hooks
 ```
 
 ## How It Works
@@ -137,20 +220,23 @@ ws.onmessage = (event) => {
 ```
 claude-hive/
 ├── server/
-│   └── index.js        # WebSocket + Express server
+│   └── index.js          # WebSocket + Express server
 ├── client/
 │   ├── src/
-│   │   ├── App.jsx           # Main React app
+│   │   ├── App.jsx             # Main React app
 │   │   └── components/
-│   │       ├── HexGrid.jsx   # Three.js hex visualization
-│   │       └── Sidebar.jsx   # Session list & events
+│   │       ├── HexGrid.jsx     # Three.js hex visualization
+│   │       └── Sidebar.jsx     # Session list & events
 │   └── package.json
 ├── hooks/
-│   └── send-event.js   # Hook script for capturing events
+│   ├── send-event.js     # Hook script (Node.js mode)
+│   └── send-event.sh     # Hook script (Docker mode - bash/curl)
 ├── cli/
-│   ├── index.js        # CLI entry point
-│   ├── setup.js        # Hook installation
-│   └── doctor.js       # Diagnostics
+│   ├── index.js          # CLI entry point
+│   ├── setup.js          # Hook installation
+│   └── doctor.js         # Diagnostics
+├── Dockerfile            # Multi-stage build
+├── docker-compose.yml    # Container orchestration
 └── package.json
 ```
 
@@ -192,6 +278,7 @@ if (event.tool_name === 'Read') return; // Skip read events
 | Source | Open | Closed |
 | License | MIT | Proprietary |
 | 3D Visualization | Yes (hex grid) | Yes (hex grid) |
+| Docker Support | Yes | No |
 | Voice Input | No | Yes (Deepgram) |
 | Analytics | Basic | Unknown |
 | Telemetry | None | Amplitude |

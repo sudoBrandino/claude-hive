@@ -2,9 +2,10 @@
  * Claude Hive - Setup Script
  *
  * Installs hooks into Claude Code settings to capture events.
+ * Supports both native (Node.js) and Docker (bash/curl) modes.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -15,51 +16,60 @@ const HOOKS_DIR = join(__dirname, '../hooks');
 const CLAUDE_SETTINGS_DIR = join(homedir(), '.claude');
 const CLAUDE_SETTINGS_PATH = join(CLAUDE_SETTINGS_DIR, 'settings.json');
 
-// Hook configuration to inject
-const HIVE_HOOKS = {
-  PostToolUse: [
-    {
-      matcher: '.*',
-      hooks: [
-        {
-          type: 'command',
-          command: `node "${join(HOOKS_DIR, 'send-event.js')}"`,
-          timeout: 5
-        }
-      ]
-    }
-  ],
-  Notification: [
-    {
-      matcher: '.*',
-      hooks: [
-        {
-          type: 'command',
-          command: `node "${join(HOOKS_DIR, 'send-event.js')}"`,
-          timeout: 5
-        }
-      ]
-    }
-  ],
-  Stop: [
-    {
-      matcher: '.*',
-      hooks: [
-        {
-          type: 'command',
-          command: `node "${join(HOOKS_DIR, 'send-event.js')}"`,
-          timeout: 5
-        }
-      ]
-    }
-  ]
-};
+// Get hook command based on mode
+function getHookCommand(mode = 'native') {
+  if (mode === 'docker') {
+    // Bash script - no Node.js required on host
+    const scriptPath = join(HOOKS_DIR, 'send-event.sh');
+    return `bash "${scriptPath}"`;
+  }
+  // Native mode - uses Node.js
+  return `node "${join(HOOKS_DIR, 'send-event.js')}"`;
+}
 
-// Marker to identify Hive hooks
-const HIVE_MARKER = '# claude-hive';
+// Build hook configuration
+function buildHooks(mode) {
+  const command = getHookCommand(mode);
 
-export async function setup() {
+  return {
+    PostToolUse: [
+      {
+        matcher: '.*',
+        hooks: [{ type: 'command', command, timeout: 5 }]
+      }
+    ],
+    Notification: [
+      {
+        matcher: '.*',
+        hooks: [{ type: 'command', command, timeout: 5 }]
+      }
+    ],
+    Stop: [
+      {
+        matcher: '.*',
+        hooks: [{ type: 'command', command, timeout: 5 }]
+      }
+    ]
+  };
+}
+
+export async function setup(options = {}) {
+  const mode = options.docker ? 'docker' : 'native';
+
   console.log(chalk.cyan('\n🐝 Claude Hive - Setup\n'));
+  console.log(chalk.white(`Mode: ${mode === 'docker' ? 'Docker (bash/curl)' : 'Native (Node.js)'}\n`));
+
+  // Make bash script executable
+  if (mode === 'docker') {
+    const bashScript = join(HOOKS_DIR, 'send-event.sh');
+    if (existsSync(bashScript)) {
+      try {
+        chmodSync(bashScript, '755');
+      } catch (err) {
+        // Ignore chmod errors on Windows
+      }
+    }
+  }
 
   // Ensure .claude directory exists
   if (!existsSync(CLAUDE_SETTINGS_DIR)) {
@@ -84,7 +94,9 @@ export async function setup() {
     settings.hooks = {};
   }
 
-  // Add Hive hooks (with marker in command for identification)
+  const HIVE_HOOKS = buildHooks(mode);
+
+  // Add Hive hooks
   for (const [eventName, hookConfigs] of Object.entries(HIVE_HOOKS)) {
     if (!settings.hooks[eventName]) {
       settings.hooks[eventName] = [];
@@ -92,7 +104,11 @@ export async function setup() {
 
     // Remove any existing Hive hooks first
     settings.hooks[eventName] = settings.hooks[eventName].filter(
-      h => !h.hooks?.some(hook => hook.command?.includes('claude-hive') || hook.command?.includes('send-event.js'))
+      h => !h.hooks?.some(hook =>
+        hook.command?.includes('claude-hive') ||
+        hook.command?.includes('send-event.js') ||
+        hook.command?.includes('send-event.sh')
+      )
     );
 
     // Add our hooks
@@ -105,17 +121,34 @@ export async function setup() {
   writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
   console.log(chalk.green('✓ Installed Hive hooks into Claude Code settings'));
 
-  console.log(chalk.cyan(`
+  if (mode === 'docker') {
+    console.log(chalk.cyan(`
+Setup complete! To start monitoring:
+
+  1. Start the container:
+     ${chalk.white('docker compose up -d')}
+
+  2. Open the dashboard:
+     ${chalk.white('http://localhost:4520')}
+
+  3. Use Claude Code as normal - events will appear in the dashboard!
+
+  Note: Requires ${chalk.yellow('curl')} and ${chalk.yellow('jq')} on your system.
+  Install with: ${chalk.white('brew install jq')} or ${chalk.white('apt install jq')}
+`));
+  } else {
+    console.log(chalk.cyan(`
 Setup complete! To start monitoring:
 
   1. Start the Hive server:
-     ${chalk.white('npx claude-hive')}
+     ${chalk.white('npm start')}
 
   2. Open the dashboard:
      ${chalk.white('http://localhost:4520')}
 
   3. Use Claude Code as normal - events will appear in the dashboard!
 `));
+  }
 }
 
 export async function uninstall() {
@@ -144,7 +177,11 @@ export async function uninstall() {
   for (const eventName of Object.keys(settings.hooks)) {
     const before = settings.hooks[eventName].length;
     settings.hooks[eventName] = settings.hooks[eventName].filter(
-      h => !h.hooks?.some(hook => hook.command?.includes('claude-hive') || hook.command?.includes('send-event.js'))
+      h => !h.hooks?.some(hook =>
+        hook.command?.includes('claude-hive') ||
+        hook.command?.includes('send-event.js') ||
+        hook.command?.includes('send-event.sh')
+      )
     );
     removed += before - settings.hooks[eventName].length;
 

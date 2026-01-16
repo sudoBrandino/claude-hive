@@ -1,0 +1,16 @@
+services:
+  hive:
+    build: .
+    container_name: claude-hive
+    ports:
+      - "4520:4520"
+    environment:
+      - PORT=4520
+      - NODE_ENV=production
+    restart: unless-stopped
+    # Optional: persist event data
+    # volumes:
+    #   - hive-data:/app/data
+
+# volumes:
+#   hive-data:
