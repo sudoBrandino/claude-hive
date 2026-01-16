@@ -19,12 +19,12 @@
 
 **macOS/Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/claude-hive/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sudoBrandino/claude-hive/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/YOUR_USERNAME/claude-hive/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/sudoBrandino/claude-hive/main/install.ps1 | iex
 ```
 
 This downloads the Docker image, starts the container, and installs the hooks automatically.
@@ -38,7 +38,7 @@ If you prefer to set things up manually:
 cat > docker-compose.yml << 'EOF'
 services:
   hive:
-    image: ghcr.io/YOUR_USERNAME/claude-hive:latest
+    image: ghcr.io/sudoBrandino/claude-hive:latest
     container_name: claude-hive
     ports:
       - "4520:4520"
@@ -58,7 +58,7 @@ Then install hooks manually (see [Platform Support](#platform-support)).
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/claude-hive
+git clone https://github.com/sudoBrandino/claude-hive
 cd claude-hive
 
 # Install hooks

@@ -1,14 +1,14 @@
 # Claude Hive - Standalone Docker Compose
 #
 # Usage:
-#   curl -O https://raw.githubusercontent.com/YOUR_USERNAME/claude-hive/main/docker-compose.ghcr.yml
+#   curl -O https://raw.githubusercontent.com/sudoBrandino/claude-hive/main/docker-compose.ghcr.yml
 #   docker compose -f docker-compose.ghcr.yml up -d
 #
 # Then open http://localhost:4520
 
 services:
   hive:
-    image: ghcr.io/YOUR_USERNAME/claude-hive:latest
+    image: ghcr.io/sudoBrandino/claude-hive:latest
     container_name: claude-hive
     ports:
       - "4520:4520"
