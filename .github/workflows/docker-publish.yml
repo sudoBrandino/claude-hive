@@ -1,11 +1,22 @@
 name: Build and Publish Docker Image
 
+# Markdown-only changes skip the build (tag pushes always build). If a required
+# status check is ever added for this workflow, drop the path filter.
 on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+
+# Cancel superseded pull request builds; main and tag builds finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io
@@ -14,6 +25,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
